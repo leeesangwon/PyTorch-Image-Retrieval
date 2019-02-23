@@ -9,59 +9,59 @@ from data_loader import test_data_generator
 import numpy as np
 
 
-def retrieve(model_list, queries, db, img_size_list, batch_size, query_expansion=False):
-    assert len(model_list) == len(img_size_list), "model_list and img_size_list should have same length"
+def retrieve(model, queries, db, img_size, infer_batch_size):
 
     query_paths = queries
     reference_paths = db
 
-    query_img_dataset = test_data_generator(queries, img_size=img_size_list[0], flip=False)
-    reference_img_dataset = test_data_generator(db, img_size=img_size_list[0], flip=False)
+    query_img_dataset = test_data_generator(queries, img_size=img_size)
+    reference_img_dataset = test_data_generator(db, img_size=img_size)
 
-    query_loader = DataLoader(query_img_dataset, batch_size=batch_size, shuffle=False, num_workers=4,
+    query_loader = DataLoader(query_img_dataset, batch_size=infer_batch_size, shuffle=False, num_workers=4,
                               pin_memory=True)
-    reference_loader = DataLoader(reference_img_dataset, batch_size=batch_size, shuffle=False, num_workers=4,
+    reference_loader = DataLoader(reference_img_dataset, batch_size=infer_batch_size, shuffle=False, num_workers=4,
                                   pin_memory=True)
 
-    sim_matrix_list = []
+    model.eval()
+    model.cuda()
 
-    for model in model_list:
-        # inference
-        model.eval()
-        model.cuda()
+    query_paths, query_vecs = batch_process(model, query_loader)
+    reference_paths, reference_vecs = batch_process(model, reference_loader)
 
-        query_paths, query_vecs = batch_process(model, query_loader)
-        reference_paths, reference_vecs = batch_process(model, reference_loader)
+    assert query_paths == queries and reference_paths == db, "order of paths should be same"
 
-        assert query_paths == queries and reference_paths == db, "order of paths should be same"
+    # DBA and AQE
+    query_vecs, reference_vecs = db_augmentation(query_vecs, reference_vecs, top_k=10)
+    query_vecs, reference_vecs = average_query_expansion(query_vecs, reference_vecs, top_k=5)
 
-        query_vecs, reference_vecs = db_augmentation(query_vecs, reference_vecs, top_k=10)
-        query_vecs, reference_vecs = db_qe(query_vecs, reference_vecs, top_k=5)     # Round 1
+    sim_matrix = calculate_sim_matrix(query_vecs, reference_vecs)
 
-        sim_matrix_list.append(calculate_sim_matrix(query_vecs, reference_vecs))
-
-    sim_matrix_cat = np.array(sim_matrix_list)
-    avg_sim_matrix = np.mean(sim_matrix_cat, axis=0)
-
-    # 여기서부터는 안건드려도 됨.
-    indices = np.argsort(avg_sim_matrix, axis=1)
+    indices = np.argsort(sim_matrix, axis=1)
     indices = np.flip(indices, axis=1)
 
     retrieval_results = {}
 
+    # Evaluation: mean average precision (mAP)
+    # You can change this part to fit your evaluation skim
     for (i, query) in enumerate(query_paths):
         query = query.split('/')[-1].split('.')[0]
         ranked_list = [reference_paths[k].split('/')[-1].split('.')[0] for k in indices[i]]
         ranked_list = ranked_list[:1000]
 
         retrieval_results[query] = ranked_list
-    print('done')
 
     return retrieval_results
 
 
 def db_augmentation(query_vecs, reference_vecs, top_k=10):
+    """
+    Database-side feature augmentation (DBA)
+    Albert Gordo, et al. "End-to-end Learning of Deep Visual Representations for Image Retrieval,"
+    International Journal of Computer Vision. 2017.
+    https://link.springer.com/article/10.1007/s11263-017-1016-8
+    """
     weights = np.logspace(0, -2., top_k+1)
+
     # Query augmentation
     sim_mat = calculate_sim_matrix(query_vecs, reference_vecs)
     indices = np.argsort(-sim_mat, axis=1)
@@ -79,7 +79,13 @@ def db_augmentation(query_vecs, reference_vecs, top_k=10):
     return query_vecs, reference_vecs
 
 
-def db_qe(query_vecs, reference_vecs, top_k=5):
+def average_query_expansion(query_vecs, reference_vecs, top_k=5):
+    """
+    Average Query Expansion (AQE)
+    Ondrej Chum, et al. "Total Recall: Automatic Query Expansion with a Generative Feature Model for Object Retrieval,"
+    International Conference of Computer Vision. 2007.
+    https://www.robots.ox.ac.uk/~vgg/publications/papers/chum07b.pdf
+    """
     # Query augmentation
     sim_mat = calculate_sim_matrix(query_vecs, reference_vecs)
     indices = np.argsort(-sim_mat, axis=1)
@@ -138,16 +144,14 @@ def _get_features_from(model, x, feature_names):
 def _get_feature(model, x):
     model_name = model.__class__.__name__
 
-    if model_name == 'DenseNet':
-        features = _get_features_from(model, x, ['classifier'])
-        feature = features['classifier']
+    if model_name == 'EmbeddingNetwork':
+        feature = model(x)
     elif model_name == 'ResNet':
         features = _get_features_from(model, x, ['fc'])
         feature = features['fc']
-    elif model_name == 'EmbeddingNetwork':
-        feature = model(x)
-    elif model_name == 'EmbeddingNetwork_Dropout':
-        feature = model(x)
+    elif model_name == 'DenseNet':
+        features = _get_features_from(model, x, ['classifier'])
+        feature = features['classifier']
     else:
         raise ValueError("Invalid model name: {}".format(model_name))
 
@@ -155,6 +159,11 @@ def _get_feature(model, x):
 
 
 def postprocess(query_vecs, reference_vecs):
+    """
+    Postprocessing:
+    1) Moving the origin of the feature space to the center of the feature vectors
+    2) L2-normalization
+    """
     # centerize
     query_vecs, reference_vecs = _centerize(query_vecs, reference_vecs)
 
