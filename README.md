@@ -4,7 +4,7 @@ PyTorch framework for image retrieval task including implementations of [N-pair 
 
 ### Loss function
 We implemented loss functions to train the image retrieval network.  
-Batch sampler for the loss function borrowed from [here](https://github.com/adambielski/siamese-triplet)
+Batch sampler for the loss function borrowed from [here](https://github.com/adambielski/siamese-triplet).
 - [N-pair Loss (NIPS 2016)](http://papers.nips.cc/paper/6199-improved-deep-metric-learning-with-multi-class-n-pair-loss-objective): Sohn, Kihyuk. "Improved Deep Metric Learning with Multi-class N-pair Loss Objective," Advances in Neural Information
     Processing Systems. 2016.
 - [Angular Loss (CVPR 2017)](https://arxiv.org/pdf/1708.01682.pdf): Wang, Jian. "Deep Metric Learning with Angular Loss," CVPR, 2017
