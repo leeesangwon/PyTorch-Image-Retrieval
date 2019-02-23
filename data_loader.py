@@ -39,7 +39,6 @@ def train_data_loader(data_path, img_size, use_augment=False):
     return image_dataset
 
 
-# nsml test_data_loader
 def test_data_loader(data_path):
     data_path = os.path.join(data_path, 'test', 'test_data')
 
