@@ -50,7 +50,7 @@ def test_data_loader(data_path):
     return queries_path, references_path
 
 
-def test_data_generator(data_path, img_size, flip=False):
+def test_data_generator(data_path, img_size):
     img_size = (img_size, img_size)
     data_transforms = transforms.Compose([
         transforms.Resize(img_size),
