@@ -29,7 +29,7 @@ def load(file_path):
 
 
 def infer(model, queries, db):
-    retrieval_results = retrieve(model, queries, db, input_size, infer_batch_size, flip_test)
+    retrieval_results = retrieve(model, queries, db, input_size, infer_batch_size)
 
     return list(zip(range(len(retrieval_results)), retrieval_results.items()))
 
@@ -62,9 +62,6 @@ def get_arguments():
     # Mode selection
     args.add_argument('--mode', type=str, default='train', help='mode selection: train or test.')
 
-    # Flip-test option
-    args.add_argument('--flip-test', type=bool, default=False)
-
     return args.parse_args()
 
 
@@ -92,9 +89,6 @@ if __name__ == '__main__':
     num_classes = config.num_classes
     num_samples = config.num_samples
     use_augmentation = config.use_augmentation
-
-    # Flip-test parameters
-    flip_test = config.flip_test
 
     infer_batch_size = 64
     log_interval = 50
