@@ -187,7 +187,8 @@ class AngularLoss(NPairLoss):
 
         return losses
 
-    def angular_loss(self, anchors, positives, negatives, angle_bound=1.):
+    @staticmethod
+    def angular_loss(anchors, positives, negatives, angle_bound=1.):
         """
         Calculates angular loss
         :param anchors: A torch.Tensor, (n, embedding_size)
@@ -201,11 +202,15 @@ class AngularLoss(NPairLoss):
 
         x = 4. * angle_bound * torch.matmul((anchors + positives), negatives.transpose(1, 2)) \
             - 2. * (1. + angle_bound) * torch.matmul(anchors, positives.transpose(1, 2))  # (n, 1, n-1)
+
+        # Preventing overflow
         with torch.no_grad():
             t = torch.max(x, dim=2)[0]
+
         x = torch.exp(x - t.unsqueeze(dim=1))
         x = torch.log(torch.exp(-t) + torch.sum(x, 2))
         loss = torch.mean(t + x)
+
         return loss
 
 
