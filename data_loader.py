@@ -40,7 +40,6 @@ def train_data_loader(data_path, img_size, use_augment=False):
 
 
 def test_data_loader(data_path):
-    data_path = os.path.join(data_path, 'test', 'test_data')
 
     # return full path
     queries_path = [os.path.join(data_path, 'query', path) for path in os.listdir(os.path.join(data_path, 'query'))]
