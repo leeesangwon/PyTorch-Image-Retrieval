@@ -18,7 +18,6 @@ class BlendedLoss(object):
         self.main_loss_type = main_loss_type
         assert main_loss_type in MAIN_LOSS_CHOICES, "invalid main loss: %s" % main_loss_type
 
-        self.metrics = []
         if self.main_loss_type == N_PAIR:
             self.main_loss_fn = NPairLoss()
         elif self.main_loss_type == ANGULAR:
@@ -53,9 +52,6 @@ class BlendedLoss(object):
         main_loss = main_loss_outputs[0] if type(main_loss_outputs) in (tuple, list) else main_loss_outputs
         blended_loss += (1-self.lambda_blending) * main_loss
         loss_dict[self.main_loss_type+'-loss'] = [main_loss.item()]
-
-        for metric in self.metrics:
-            metric(output_embedding, target, main_loss_outputs)
 
         return blended_loss, loss_dict
 
