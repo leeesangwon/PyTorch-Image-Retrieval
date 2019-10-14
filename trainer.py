@@ -35,7 +35,7 @@ def fit(train_loader, model, loss_fn, optimizer, scheduler, nb_epoch,
         scheduler.step()
 
         # Train stage
-        train_loss, metrics = train_epoch(train_loader, model, loss_fn, optimizer, device, log_interval)
+        train_loss = train_epoch(train_loader, model, loss_fn, optimizer, device, log_interval)
 
         log_dict = {'epoch': epoch + 1,
                     'epoch_total': nb_epoch,
@@ -43,10 +43,7 @@ def fit(train_loader, model, loss_fn, optimizer, scheduler, nb_epoch,
                     }
 
         message = 'Epoch: {}/{}. Train set: Average loss: {:.4f}'.format(epoch + 1, nb_epoch, train_loss)
-        for metric in metrics:
-            log_dict[metric.name()] = metric.value()
-            message += '\t{}: {}'.format(metric.name(), metric.value())
-
+ 
         print(message)
         print(log_dict)
         if (epoch + 1) % 5 == 0:
@@ -54,10 +51,6 @@ def fit(train_loader, model, loss_fn, optimizer, scheduler, nb_epoch,
 
 
 def train_epoch(train_loader, model, loss_fn, optimizer, device, log_interval):
-
-    for metric in loss_fn.metrics:
-        metric.reset()
-
     model.train()
     total_loss = 0
 
@@ -88,10 +81,8 @@ def train_epoch(train_loader, model, loss_fn, optimizer, device, log_interval):
                 batch_idx * len(data[0]), len(train_loader.dataset), 100. * batch_idx / len(train_loader))
             for name, value in losses.items():
                 message += '\t{}: {:.6f}'.format(name, np.mean(value))
-            for metric in loss_fn.metrics:
-                message += '\t{}: {}'.format(metric.name(), metric.value())
-
+ 
             print(message)
 
     total_loss /= (batch_idx + 1)
-    return total_loss, loss_fn.metrics
+    return total_loss
