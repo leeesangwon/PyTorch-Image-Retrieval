@@ -156,7 +156,7 @@ class NPairLoss(nn.Module):
 class AngularLoss(NPairLoss):
     """
     Angular loss
-    Wang, Jian. "Deep Metric Learning with Angular Loss," CVPR, 2017
+    Wang, Jian. "Deep Metric Learning with Angular Loss," ICCV, 2017
     https://arxiv.org/pdf/1708.01682.pdf
     """
 
@@ -213,7 +213,7 @@ class AngularLoss(NPairLoss):
 class NPairAngularLoss(AngularLoss):
     """
     Angular loss
-    Wang, Jian. "Deep Metric Learning with Angular Loss," CVPR, 2017
+    Wang, Jian. "Deep Metric Learning with Angular Loss," ICCV, 2017
     https://arxiv.org/pdf/1708.01682.pdf
     """
 
